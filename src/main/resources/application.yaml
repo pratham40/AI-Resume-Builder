@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: resumeBuilder
+  data:
+    mongodb:
+      uri: mongodb+srv://pratham25736_db_user:tKTyBIOIo4KCip4o@cluster0.ikiindu.mongodb.net/?appName=Cluster0
+      database: resumeDB
+      auto-index-creation: true
+  datasource:
+    name: user
+
+
+server:
+  servlet:
+    context-path: /resume
