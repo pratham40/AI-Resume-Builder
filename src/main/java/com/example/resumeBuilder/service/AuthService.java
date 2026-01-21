@@ -5,8 +5,8 @@ import com.example.resumeBuilder.dto.RegisterRequest;
 import com.example.resumeBuilder.entity.User;
 import com.example.resumeBuilder.exception.ResourceExistException;
 import com.example.resumeBuilder.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -14,10 +14,18 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AuthService {
+    @Value("${app.base.url:http://localhost:8080}")
+    private String appUrl;
+
+    private final EmailService emailService;
     private final UserRepository userRepository;
+
+    public AuthService(EmailService emailService, UserRepository userRepository) {
+        this.emailService = emailService;
+        this.userRepository = userRepository;
+    }
 
     public AuthResponse register(RegisterRequest registerRequest) {
 
@@ -42,7 +50,8 @@ public class AuthService {
 
         userRepository.save(user);
 
-//        TODO: SEND VERIFICATION EMAIL
+
+        sendVerificationEmail(user);
 
         log.info("User registered successfully : {}", user);
 
@@ -50,6 +59,24 @@ public class AuthService {
 
 
 
+    }
+
+    private void sendVerificationEmail(User user) {
+        try{
+            String link = appUrl+"/api/auth/verify-email?token="+user.getVerificationToken();
+            String htmlContent = "<p>Dear " + user.getName() + ",</p>"
+                    + "<p>Thank you for registering. Please click the link below to verify your email address:</p>"
+                    + "<a href=\"" + link + "\">Verify Email</a>"
+                    + "<p>This link will expire in 15 minutes.</p>"
+                    + "<p>If you did not register, please ignore this email.</p>"
+                    + "<p>Best regards,<br/>Resume Builder Team</p>";
+
+
+            emailService.sendHtmlEmail(user.getEmail(), "Email Verification", htmlContent);
+            log.info("Verification email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send verification email to "+user.getEmail()+": "+e.getMessage());
+        }
     }
 
 
