@@ -9,10 +9,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 
 @RestController
@@ -26,8 +25,18 @@ public class AuthController {
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request){
 
         AuthResponse authResponse=authService.register(request);
+        log.info("User registered successfully: {}", authResponse);
         return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
 
     }
+
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token){
+        authService.verifyEmail(token);
+        log.info("Email verified for token: {}", token);
+        return ResponseEntity.status(HttpStatus.OK).body(Map.of("message","Email verified successfully"));
+    }
+
 
 }
