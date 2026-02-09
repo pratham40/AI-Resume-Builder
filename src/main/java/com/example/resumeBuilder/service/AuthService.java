@@ -1,12 +1,17 @@
 package com.example.resumeBuilder.service;
 
 import com.example.resumeBuilder.dto.AuthResponse;
+import com.example.resumeBuilder.dto.LoginRequest;
 import com.example.resumeBuilder.dto.RegisterRequest;
 import com.example.resumeBuilder.entity.User;
 import com.example.resumeBuilder.exception.ResourceExistException;
 import com.example.resumeBuilder.repository.UserRepository;
+import com.example.resumeBuilder.utils.JwtUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,12 +28,20 @@ public class AuthService {
     private final EmailService emailService;
     private final UserRepository userRepository;
 
-    public AuthService(EmailService emailService, UserRepository userRepository) {
+
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    @Autowired
+    private final PasswordEncoder passwordEncoder;
+
+    public AuthService(EmailService emailService, UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.emailService = emailService;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    public AuthResponse register(RegisterRequest registerRequest) {
+    public AuthResponse register(RegisterRequest registerRequest,String imageUrl) {
 
         try {
             log.info("Register request received : {}", registerRequest);
@@ -41,8 +54,8 @@ public class AuthService {
             User user=User.builder()
                     .name(registerRequest.getName())
                     .email(registerRequest.getEmail())
-                    .password(registerRequest.getPassword())
-                    .profileImageUrl(registerRequest.getProfileImageUrl())
+                    .password(passwordEncoder.encode(registerRequest.getPassword()))
+                    .profileImageUrl(imageUrl)
                     .subscriptionPlan("basic")
                     .emailVerified(false)
                     .verificationToken(UUID.randomUUID().toString())
@@ -127,5 +140,33 @@ public class AuthService {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+
+    public AuthResponse login(LoginRequest loginRequest){
+        Optional<User> user = userRepository.findByEmail(loginRequest.getEmail());
+
+        if (!user.isPresent()){
+            log.error("email {} not found", loginRequest.getEmail());
+            throw new UsernameNotFoundException("Email not found");
+        }
+        if(!passwordEncoder.matches(loginRequest.getPassword(),user.get().getPassword())){
+            log.error("password {} does not match", loginRequest.getPassword());
+            throw  new UsernameNotFoundException("Wrong password Please try again");
+        }
+
+        if (!user.get().isEmailVerified()){
+            log.error("email is not verified");
+            sendVerificationEmail(user.get());
+            throw  new UsernameNotFoundException("Email is not verified please try again");
+        }
+
+        String token = jwtUtils.generateJwtToken(user.get().getId());
+
+        AuthResponse authResponse = toResponse(user.get());
+
+        authResponse.setToken(token);
+
+        return authResponse;
     }
 }
