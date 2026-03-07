@@ -169,4 +169,10 @@ public class AuthService {
 
         return authResponse;
     }
+
+    public AuthResponse getProfileOfUser(Object principalUser) {
+        User user = (User) principalUser;
+
+        return toResponse(user);
+    }
 }

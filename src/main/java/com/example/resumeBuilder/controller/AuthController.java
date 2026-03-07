@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -68,6 +69,18 @@ public class AuthController {
             log.error("Error while logging in: {} for user : {}", e.getMessage(), loginRequest.getEmail());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message",e.getMessage()));
         }
+    }
+
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Authentication authentication){
+
+        Object principalUser = authentication.getPrincipal();
+
+        AuthResponse authResponse = authService.    getProfileOfUser(principalUser);
+
+        return ResponseEntity.status(HttpStatus.OK).body(authResponse);
+
     }
 
 
